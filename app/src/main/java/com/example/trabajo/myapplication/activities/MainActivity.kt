@@ -9,6 +9,9 @@ import com.example.trabajo.myapplication.R
 import com.example.trabajo.myapplication.models.OneData
 import com.google.gson.Gson
 import org.json.JSONObject
+import android.os.Build
+
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -38,9 +41,13 @@ class MainActivity : AppCompatActivity() {
         Log.d("APP NAME", "El nombre de la app es: ${oneData.appName}")
         Log.d("APP PACKAGE NAME", "El nombre de la app es: ${oneData.appPkgName}")
 
+
+        Log.d("APP ANDROID RELEASE", getAndroidReleaseVersion())
+
+
         //TODO agregar version android aparato
         //TODO listar todas app con nombre com.retailsbs.
-        //
+
 
         generateJson(oneData)
 
@@ -48,29 +55,67 @@ class MainActivity : AppCompatActivity() {
 
     private fun currentAppRamUsage(): Long {
 
-        val memInfo = Debug.MemoryInfo()
-        Debug.getMemoryInfo(memInfo)
-        var res = memInfo.totalPrivateDirty.toLong()
+        var res : Long
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT)
-            res += memInfo.totalPrivateClean.toLong()
+        try {
 
-        return res / 1024L
+            val memInfo = Debug.MemoryInfo()
+            Debug.getMemoryInfo(memInfo)
+            res = memInfo.totalPrivateDirty.toLong()
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT)
+                res += memInfo.totalPrivateClean.toLong()
+
+            return res / 1024L
+
+        } catch (e : Exception){
+            e.printStackTrace()
+        }
+
+        return -1L
     }
 
     private fun freeRamMemorySize(): Long {
-        val mi = ActivityManager.MemoryInfo()
-        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        activityManager.getMemoryInfo(mi)
 
-        return mi.availMem / 1048576L
+        var mAvailableMemory : Long
+
+        try {
+
+            val mi = ActivityManager.MemoryInfo()
+            val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            activityManager.getMemoryInfo(mi)
+
+            mAvailableMemory = mi.availMem / 1048576L
+
+            return mAvailableMemory
+
+        } catch (e : Exception){
+            e.printStackTrace()
+        }
+
+        return -1L
+
     }
 
     private fun totalRamMemorySize(): Long {
-        val mi = ActivityManager.MemoryInfo()
-        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        activityManager.getMemoryInfo(mi)
-        return mi.totalMem / 1048576L
+
+        var mTotalMemory : Long
+
+        try {
+            val mi = ActivityManager.MemoryInfo()
+            val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            activityManager.getMemoryInfo(mi)
+
+            mTotalMemory = mi.totalMem / 1048576L
+
+            return mTotalMemory
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        return -1L
+
     }
 
     private fun externalMemoryAvailable(): Boolean {
@@ -78,22 +123,59 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun getAvailableInternalMemorySize(): Long {
-        val path = Environment.getDataDirectory()
-        val stat = StatFs(path.path)
-        val blockSize = stat.blockSize.toLong()
-        val availableBlocks = stat.availableBlocks.toLong()
-        return (availableBlocks * blockSize) / 1048576L
+
+        var mAvInternalMemory : Long
+
+        try {
+
+            val path = Environment.getDataDirectory()
+            val stat = StatFs(path.path)
+            val blockSize = stat.blockSize.toLong()
+            val availableBlocks = stat.availableBlocks.toLong()
+
+            mAvInternalMemory = (availableBlocks * blockSize) / 1048576L
+
+            return mAvInternalMemory
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        return -1L
+
     }
 
     private fun getTotalInternalMemorySize(): Long {
-        val path = Environment.getDataDirectory()
-        val stat = StatFs(path.path)
-        val blockSize = stat.blockSize.toLong()
-        val totalBlocks = stat.blockCount.toLong()
-        return (totalBlocks * blockSize) / 1048576L
+
+        var mTotalInternalMemory : Long
+
+        try {
+
+            val path = Environment.getDataDirectory()
+            val stat = StatFs(path.path)
+            val blockSize = stat.blockSize.toLong()
+            val totalBlocks = stat.blockCount.toLong()
+
+            mTotalInternalMemory = (totalBlocks * blockSize) / 1048576L
+
+            return mTotalInternalMemory
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        return -1L
+
     }
 
     fun getAvailableExternalMemorySize(): Long {
+
+        try {
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         return if (externalMemoryAvailable()) {
             val path = Environment.getExternalStorageDirectory()
             val stat = StatFs(path.path)
@@ -106,6 +188,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun getTotalExternalMemorySize(): Long {
+
+        try {
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         return if (externalMemoryAvailable()) {
             val path = Environment.getExternalStorageDirectory()
             val stat = StatFs(path.path)
@@ -141,9 +230,30 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun getApplicationName(context: Context): String {
-        val applicationInfo = context.applicationInfo
-        val stringId = applicationInfo.labelRes
-        return if (stringId == 0) applicationInfo.nonLocalizedLabel.toString() else context.getString(stringId)
+
+        var mAppName = "App Name couldn't be retrieved"
+
+        try {
+
+            val applicationInfo = context.applicationInfo
+            val stringId = applicationInfo.labelRes
+            if (stringId == 0) {
+
+                mAppName = applicationInfo.nonLocalizedLabel.toString()
+
+                return mAppName
+
+            } else {
+                mAppName = context.getString(stringId)
+                return mAppName
+            }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        return mAppName
+
     }
 
     private fun getAppPackageName(): String {
@@ -162,5 +272,21 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+    private fun getAndroidReleaseVersion (): String {
+
+        var mAndroidVersion: String = android.os.Build.VERSION.RELEASE
+
+        return mAndroidVersion
+    }
+
+    private fun getOsName(): String? {
+
+        var osName = ""
+
+        val fields = Build.VERSION_CODES::class.java.fields
+        osName = fields[Build.VERSION.SDK_INT+1].name
+
+        return osName
+    }
 
 }
