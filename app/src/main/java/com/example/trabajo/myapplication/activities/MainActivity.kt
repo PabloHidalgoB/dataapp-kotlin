@@ -2,15 +2,16 @@ package com.example.trabajo.myapplication.activities
 
 import android.app.ActivityManager
 import android.content.Context
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageInfo
 import android.os.*
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import com.example.trabajo.myapplication.R
 import com.example.trabajo.myapplication.models.OneData
 import com.google.gson.Gson
-import org.json.JSONObject
 import android.os.Build
-
+import java.util.ArrayList
 
 
 class MainActivity : AppCompatActivity() {
@@ -23,13 +24,16 @@ class MainActivity : AppCompatActivity() {
 
         oneData = OneData()
         oneData.appName = getApplicationName(this)
-        //oneData.appPkgName = getAppPackageName()
+        oneData.appPkgNames = getAppPackageNames()
         oneData.usedRam = currentAppRamUsage()
         oneData.freeRam = freeRamMemorySize()
         oneData.totalRam = totalRamMemorySize()
         oneData.freeMemory = getAvailableInternalMemorySize()
         oneData.usedMemory = (getTotalInternalMemorySize() - getAvailableInternalMemorySize())
         oneData.totalMemory = getTotalInternalMemorySize()
+        oneData.freeExtMemory = getAvailableExternalMemorySize()
+        oneData.usedExtMemory = (getTotalExternalMemorySize() - getAvailableExternalMemorySize())
+        oneData.totalExtMemory = getTotalExternalMemorySize()
 
         Log.d("RAM USAGE", "Actualmente se esta usando ${oneData.usedRam} MB de memoria RAM")
         Log.d("RAM FREE", "Hay ${oneData.freeRam} MB libre de memoria RAM")
@@ -37,19 +41,24 @@ class MainActivity : AppCompatActivity() {
         Log.d("AVAILABLE MEMORY", "Hay ${oneData.freeMemory} MB disponible de memoria de almacenamiento")
         Log.d("USED MEMORY", "Hay ${oneData.usedMemory} MB usado de memoria de almacenamiento")
         Log.d("TOTAL MEMORY", "Hay ${oneData.totalMemory} MB total de memoria de almacenamiento")
+        Log.d("AVAILABLE EXT MEMORY", "Hay ${oneData.freeExtMemory} MB total de memoria de almacenamiento")
+        Log.d("USED MEMORY", "Hay ${oneData.usedExtMemory} MB total de memoria de almacenamiento")
+        Log.d("TOTAL MEMORY", "Hay ${oneData.totalExtMemory} MB total de memoria de almacenamiento")
 
         Log.d("APP NAME", "El nombre de la app es: ${oneData.appName}")
-        Log.d("APP PACKAGE NAME", "El nombre de la app es: ${oneData.appPkgName}")
+        Log.d("APP PACKAGE NAME", "El nombre de la app es: ${oneData.appPkgNames}")
 
 
         Log.d("APP ANDROID RELEASE", getAndroidReleaseVersion())
 
 
-        //TODO agregar version android aparato
+        //TODO agregar version android aparato [DONE]
         //TODO listar todas app con nombre com.retailsbs.
 
 
         generateJson(oneData)
+
+       // Log.d("COM SBS APPS", getAppPackageNames().toString())
 
     }
 
@@ -170,40 +179,56 @@ class MainActivity : AppCompatActivity() {
 
     fun getAvailableExternalMemorySize(): Long {
 
+        var mAvExtMemory : Long
+
         try {
 
+            if (externalMemoryAvailable()) {
+                val path = Environment.getExternalStorageDirectory()
+                val stat = StatFs(path.path)
+                val blockSize = stat.blockSize.toLong()
+                val availableBlocks = stat.availableBlocks.toLong()
+
+                mAvExtMemory = (availableBlocks * blockSize) / 1048576L
+
+                return mAvExtMemory
+
+            } else {
+
+                return 0
+
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
 
-        return if (externalMemoryAvailable()) {
-            val path = Environment.getExternalStorageDirectory()
-            val stat = StatFs(path.path)
-            val blockSize = stat.blockSize.toLong()
-            val availableBlocks = stat.availableBlocks.toLong()
-            availableBlocks * blockSize
-        } else {
-            0
-        }
+        return -1L
     }
 
     fun getTotalExternalMemorySize(): Long {
 
+        var mTotalExtMemory : Long
+
         try {
 
+            if (externalMemoryAvailable()) {
+                val path = Environment.getExternalStorageDirectory()
+                val stat = StatFs(path.path)
+                val blockSize = stat.blockSize.toLong()
+                val totalBlocks = stat.blockCount.toLong()
+
+                mTotalExtMemory = (totalBlocks * blockSize) / 1048576L
+
+                return mTotalExtMemory
+
+            } else {
+                return 0
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
 
-        return if (externalMemoryAvailable()) {
-            val path = Environment.getExternalStorageDirectory()
-            val stat = StatFs(path.path)
-            val blockSize = stat.blockSize.toLong()
-            val totalBlocks = stat.blockCount.toLong()
-            totalBlocks * blockSize
-        } else {
-            0
-        }
+        return -1L
     }
 
     private fun formatSize(size: Long): String {
@@ -287,6 +312,28 @@ class MainActivity : AppCompatActivity() {
         osName = fields[Build.VERSION.SDK_INT+1].name
 
         return osName
+    }
+
+    private fun getAppPackageNames(): ArrayList<String> {
+
+        var mAppName : String
+
+
+        val res = ArrayList<String>()
+        val packs = packageManager.getInstalledPackages(0)
+
+        for (i in packs.indices) {
+            val p = packs[i]
+            if (isSystemPackage(p) == false && (p.packageName.contains("com.retailsbs.") || p.packageName.contains("cl.retailsbs."))) {
+                mAppName = p.packageName
+                res.add(mAppName)
+            }
+        }
+        return res
+    }
+
+    private fun isSystemPackage(pkgInfo: PackageInfo): Boolean {
+        return if (pkgInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM != 0) true else false
     }
 
 }
